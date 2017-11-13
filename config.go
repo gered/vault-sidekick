@@ -82,6 +82,7 @@ func init() {
 	flag.StringVar(&options.vaultURL, "vault", getEnv("VAULT_ADDR", "https://127.0.0.1:8200"), "url the vault service or VAULT_ADDR")
 	flag.StringVar(&options.vaultAuthFile, "auth", getEnv("AUTH_FILE", ""), "a configuration file in json or yaml containing authentication arguments")
 	flag.StringVar(&options.vaultAuthFileFormat, "format", getEnv("AUTH_FORMAT", "default"), "the auth file format")
+	flag.StringVar(&options.vaultAuthOptions.Method, "method", getEnv("AUTH_METHOD", "token"), "the authentication method to use (use of an auth file will override this setting)")
 	flag.StringVar(&options.outputDir, "output", getEnv("VAULT_OUTPUT", "/etc/secrets"), "the full path to write resources or VAULT_OUTPUT")
 	flag.BoolVar(&options.dryRun, "dryrun", false, "perform a dry run, printing the content to screen")
 	flag.BoolVar(&options.skipTLSVerify, "tls-skip-verify", false, "whether to check and verify the vault service certificate")
