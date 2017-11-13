@@ -124,6 +124,40 @@ func writeCertificateBundleFile(filename string, data map[string]interface{}, mo
 	return nil
 }
 
+func writeKeyCertificateBundleFile(filename string, data map[string]interface{}, mode os.FileMode) error {
+	bundleFile := fmt.Sprintf("%s-bundle.pem", filename)
+	keyFile := fmt.Sprintf("%s-key.pem", filename)
+	caFile := fmt.Sprintf("%s-ca.pem", filename)
+	certFile := fmt.Sprintf("%s.pem", filename)
+
+	bundle := fmt.Sprintf("%s\n%s", data["private_key"], data["certificate"])
+	key := fmt.Sprintf("%s\n", data["private_key"])
+	ca := fmt.Sprintf("%s\n", data["issuing_ca"])
+	certificate := fmt.Sprintf("%s\n", data["certificate"])
+
+	if err := writeFile(bundleFile, []byte(bundle), mode); err != nil {
+		glog.Errorf("failed to write the bundled certificate file, error: %s", err)
+		return err
+	}
+
+	if err := writeFile(certFile, []byte(certificate), mode); err != nil {
+		glog.Errorf("failed to write the certificate file, errro: %s", err)
+		return err
+	}
+
+	if err := writeFile(caFile, []byte(ca), mode); err != nil {
+		glog.Errorf("failed to write the ca file, errro: %s", err)
+		return err
+	}
+
+	if err := writeFile(keyFile, []byte(key), mode); err != nil {
+		glog.Errorf("failed to write the key file, errro: %s", err)
+		return err
+	}
+
+	return nil
+}
+
 func writeTxtFile(filename string, data map[string]interface{}, mode os.FileMode) error {
 	keys := getKeys(data)
 	if len(keys) > 1 {
