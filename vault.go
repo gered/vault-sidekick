@@ -463,6 +463,8 @@ func newVaultClient(opts *config) (*api.Client, error) {
 	switch plugin {
 	case "userpass":
 		token, err = NewUserPassPlugin(client).Create(opts.vaultAuthOptions)
+	case "kubernetes":
+		token, err = NewKubernetesPlugin(client).Create(opts.vaultAuthOptions)
 	case "approle":
 		token, err = NewAppRolePlugin(client).Create(opts.vaultAuthOptions)
 	case "token":
