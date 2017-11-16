@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -65,10 +66,23 @@ func writeEnvFile(filename string, data map[string]interface{}, mode os.FileMode
 	return writeFile(filename, buf.Bytes(), mode)
 }
 
+func getCombinedCaChain(dataValue interface{}) (string, error) {
+	arr, ok := dataValue.([]interface{})
+	if !ok {
+		return "", errors.New("ca_chain not of type array")
+	}
+	caChain := make([]string, len(arr))
+	for i := range arr {
+		caChain[i] = arr[i].(string)
+	}
+	return strings.Join(caChain, "\n"), nil
+}
+
 func writeCertificateFile(filename string, data map[string]interface{}, mode os.FileMode) error {
 	files := map[string]string{
 		"certificate": "crt",
 		"issuing_ca":  "ca",
+		"ca_chain":    "ca.pem",
 		"private_key": "key",
 	}
 	for key, suffix := range files {
@@ -80,7 +94,18 @@ func writeCertificateFile(filename string, data map[string]interface{}, mode os.
 		}
 
 		// step: write the file
-		if err := writeFile(name, []byte(fmt.Sprintf("%s", content)), mode); err != nil {
+		var contentToWrite string
+		var err error
+		if key == "ca_chain" {
+			contentToWrite, err = getCombinedCaChain(data[key])
+			if err != nil {
+				glog.Errorf("failed to parse ca_chain: %s", err)
+			}
+		} else {
+			contentToWrite = fmt.Sprintf("%s", content)
+		}
+
+		if err := writeFile(name, []byte(contentToWrite), mode); err != nil {
 			glog.Errorf("failed to write resource: %s, element: %s, filename: %s, error: %s", filename, suffix, name, err)
 			continue
 		}
@@ -94,12 +119,18 @@ func writeCertificateBundleFile(filename string, data map[string]interface{}, mo
 	bundleFile := fmt.Sprintf("%s-bundle.pem", filename)
 	keyFile := fmt.Sprintf("%s-key.pem", filename)
 	caFile := fmt.Sprintf("%s-ca.pem", filename)
+	caChainFile := fmt.Sprintf("%s-ca-chain.pem", filename)
 	certFile := fmt.Sprintf("%s.pem", filename)
 
 	bundle := fmt.Sprintf("%s\n\n%s", data["certificate"], data["issuing_ca"])
 	key := fmt.Sprintf("%s\n", data["private_key"])
 	ca := fmt.Sprintf("%s\n", data["issuing_ca"])
 	certificate := fmt.Sprintf("%s\n", data["certificate"])
+	caChain, err := getCombinedCaChain(data["ca_chain"])
+	if err != nil {
+		glog.Errorf("failed to parse ca_chain: %s", err)
+		return err
+	}
 
 	if err := writeFile(bundleFile, []byte(bundle), mode); err != nil {
 		glog.Errorf("failed to write the bundled certificate file, error: %s", err)
@@ -113,6 +144,11 @@ func writeCertificateBundleFile(filename string, data map[string]interface{}, mo
 
 	if err := writeFile(caFile, []byte(ca), mode); err != nil {
 		glog.Errorf("failed to write the ca file, errro: %s", err)
+		return err
+	}
+
+	if err := writeFile(caChainFile, []byte(caChain), mode); err != nil {
+		glog.Errorf("failed to write the ca_chain file, errro: %s", err)
 		return err
 	}
 
@@ -128,12 +164,18 @@ func writeKeyCertificateBundleFile(filename string, data map[string]interface{},
 	bundleFile := fmt.Sprintf("%s-bundle.pem", filename)
 	keyFile := fmt.Sprintf("%s-key.pem", filename)
 	caFile := fmt.Sprintf("%s-ca.pem", filename)
+	caChainFile := fmt.Sprintf("%s-ca-chain.pem", filename)
 	certFile := fmt.Sprintf("%s.pem", filename)
 
 	bundle := fmt.Sprintf("%s\n%s", data["private_key"], data["certificate"])
 	key := fmt.Sprintf("%s\n", data["private_key"])
 	ca := fmt.Sprintf("%s\n", data["issuing_ca"])
 	certificate := fmt.Sprintf("%s\n", data["certificate"])
+	caChain, err := getCombinedCaChain(data["ca_chain"])
+	if err != nil {
+		glog.Errorf("failed to parse ca_chain: %s", err)
+		return err
+	}
 
 	if err := writeFile(bundleFile, []byte(bundle), mode); err != nil {
 		glog.Errorf("failed to write the bundled certificate file, error: %s", err)
@@ -147,6 +189,11 @@ func writeKeyCertificateBundleFile(filename string, data map[string]interface{},
 
 	if err := writeFile(caFile, []byte(ca), mode); err != nil {
 		glog.Errorf("failed to write the ca file, errro: %s", err)
+		return err
+	}
+
+	if err := writeFile(caChainFile, []byte(caChain), mode); err != nil {
+		glog.Errorf("failed to write the ca_chain file, errro: %s", err)
 		return err
 	}
 
